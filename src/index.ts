@@ -49,6 +49,6 @@ export default {
   async scheduled(event: ScheduledEvent, env: EnvBindings, ctx: ExecutionContext) {
     setLogLevel(env);
     await ensureMigrations(env);
-    ctx.waitUntil(handleCron(env));
+    await handleCron(env);
   },
 };

@@ -55,4 +55,11 @@ describe('bot labels', () => {
       ].join('\n')
     );
   });
+
+  it('does not show select variant when variant options are empty', () => {
+    const list = formatList([makeTrack({ variant_options: '[]' })]);
+
+    expect(list).toBe(['#1 Zumblebi Alien', 'jellycat.com • UNKNOWN', 'Last checked: --'].join('\n'));
+    expect(list).not.toContain('[select variant]');
+  });
 });
