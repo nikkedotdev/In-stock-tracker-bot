@@ -1,4 +1,5 @@
 import { Track, VariantOption } from '../core/types';
+import { getTrackDisplayLabel, getTrackDisplayName } from './labels';
 
 export function formatStartMessage(): string {
   return [
@@ -15,13 +16,15 @@ export function formatHelpMessage(): string {
   ].join('\n');
 }
 
-export function formatTrackingAck(order: number, host: string): string {
-  return `Tracking #${order}: **${host}** - I will notify you when it is available.`;
+export function formatTrackingAck(order: number, displayName: string, host: string): string {
+  const label = displayName === host ? `**${host}**` : `**${displayName}** (${host})`;
+  return `Tracking #${order}: ${label} - I will notify you when it is available.`;
 }
 
-export function formatVariantPrompt(order: number, host: string, options: VariantOption[]): string {
+export function formatVariantPrompt(order: number, displayName: string, host: string, options: VariantOption[]): string {
+  const label = displayName === host ? `**${host}**` : `**${displayName}** (${host})`;
   const lines = [
-    `Tracking #${order}: **${host}** has multiple options.`,
+    `Tracking #${order}: ${label} has multiple options.`,
     'Tap an option button below, or use `/variant <option#>` (`/variant <#> <option#>` when several items are pending):',
   ];
   options.forEach((option, idx) => {
@@ -36,18 +39,17 @@ export function formatList(tracks: Track[]): string {
   const rows = tracks.map((track, idx) => {
     const flags = track.needs_manual ? '⚠ manual' : '';
     const last = track.last_checked_at ?? '--';
-    const variantNote = track.variant_label
-      ? ` [${track.variant_label}]`
-      : track.variant_options
-        ? ' [select variant]'
-        : '';
-    return `#${idx + 1} ${track.site_host}${variantNote} | ${track.status} | ${last} ${flags}`.trim();
+    const label = getTrackDisplayLabel(track, false);
+    const selectionState = !track.variant_label && track.variant_options ? ' [select variant]' : '';
+    const host = getTrackDisplayName(track) === track.site_host ? '' : ` | ${track.site_host}`;
+    return `#${idx + 1} ${label}${selectionState}${host} | ${track.status} | ${last} ${flags}`.trim();
   });
   return ['```', ...rows, '```'].join('\n');
 }
 
-export function formatRemoveConfirmation(host: string): string {
-  return `Removed tracking for **${host}**.`;
+export function formatRemoveConfirmation(displayName: string, host: string): string {
+  const label = displayName === host ? `**${host}**` : `**${displayName}** (${host})`;
+  return `Removed tracking for ${label}.`;
 }
 
 export function formatRemovePrompt(): string {

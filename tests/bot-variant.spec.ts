@@ -75,12 +75,14 @@ describe('variant picker flows', () => {
 
   it('opens URL-first picker for /variant when multiple tracked URLs have variants', async () => {
     const userId = await repo.upsertUser('123');
-    await repo.insertTrack(userId, 'https://one.example/item', 'one.example', 'h1', null, {
+    const firstTrackId = await repo.insertTrack(userId, 'https://one.example/item', 'one.example', 'h1', null, {
       variantOptions: JSON.stringify(sampleOptions('S', 'M')),
     });
-    await repo.insertTrack(userId, 'https://two.example/item', 'two.example', 'h2', null, {
+    const secondTrackId = await repo.insertTrack(userId, 'https://two.example/item', 'two.example', 'h2', null, {
       variantOptions: JSON.stringify(sampleOptions('Red', 'Blue')),
     });
+    await repo.updateAfterCheck(firstTrackId, { title: 'Zumblebi Alien' });
+    await repo.updateAfterCheck(secondTrackId, { title: 'Bashful Cream Bunny' });
 
     await handler.handle(messageUpdate('/variant'));
 
@@ -88,8 +90,22 @@ describe('variant picker flows', () => {
     expect(messages).toHaveLength(1);
     expect(messages[0].text).toContain('Choose a tracked URL first');
     expect(messages[0].reply_markup.inline_keyboard).toHaveLength(2);
+    expect(messages[0].reply_markup.inline_keyboard[0][0].text).toContain('Zumblebi Alien');
+    expect(messages[0].reply_markup.inline_keyboard[1][0].text).toContain('Bashful Cream Bunny');
     expect(messages[0].reply_markup.inline_keyboard[0][0].callback_data).toBe('variant-track:1');
     expect(messages[0].reply_markup.inline_keyboard[1][0].callback_data).toBe('variant-track:2');
+  });
+
+  it('uses title-first labels in remove picker buttons', async () => {
+    const userId = await repo.upsertUser('123');
+    const trackId = await repo.insertTrack(userId, 'https://one.example/item', 'one.example', 'h1', null, {});
+    await repo.updateAfterCheck(trackId, { title: 'Zumblebi Alien' });
+
+    await handler.handle(messageUpdate('/remove'));
+
+    const messages = endpointBodies(fetchMock, '/sendMessage');
+    expect(messages).toHaveLength(1);
+    expect(messages[0].reply_markup.inline_keyboard[0][0].text).toContain('Zumblebi Alien');
   });
 
   it('supports callback flow: choose URL then variant', async () => {
@@ -118,7 +134,7 @@ describe('variant picker flows', () => {
 
     messages = endpointBodies(fetchMock, '/sendMessage');
     expect(messages).toHaveLength(1);
-    expect(messages[0].text).toContain('now monitoring **Large**');
+    expect(messages[0].text).toContain('Tracking #1: now monitoring **one.example** [Large]');
   });
 });
 
