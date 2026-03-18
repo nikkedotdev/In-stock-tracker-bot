@@ -24,7 +24,7 @@ export class RateLimiter {
   }
 
   private async acquire(host: string) {
-    while (true) {
+    for (;;) {
       const hostCount = this.hostCounts.get(host) ?? 0;
       if (hostCount < this.opts.perHost && this.globalActive < this.opts.global) {
         this.hostCounts.set(host, hostCount + 1);

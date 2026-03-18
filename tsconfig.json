@@ -11,6 +11,6 @@
     "types": ["@cloudflare/workers-types", "vitest/globals"],
     "noEmit": true
   },
-  "include": ["src", "tests", "wrangler.toml"],
+  "include": ["src", "tests", "vitest.config.ts", "wrangler.toml"],
   "exclude": ["node_modules", "dist"]
 }

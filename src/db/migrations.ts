@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS tracks (
   fail_count INTEGER DEFAULT 0,
   backoff_sec INTEGER DEFAULT 60,
   needs_manual INTEGER DEFAULT 0,
+  last_http_status INTEGER,
+  last_error_kind TEXT,
+  state_reason TEXT,
   etag TEXT,
   content_sig TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -47,6 +50,9 @@ export async function runMigrations(client: D1Client): Promise<void> {
     { name: 'variant_id', sql: 'ALTER TABLE tracks ADD COLUMN variant_id TEXT' },
     { name: 'variant_label', sql: 'ALTER TABLE tracks ADD COLUMN variant_label TEXT' },
     { name: 'variant_options', sql: 'ALTER TABLE tracks ADD COLUMN variant_options TEXT' },
+    { name: 'last_http_status', sql: 'ALTER TABLE tracks ADD COLUMN last_http_status INTEGER' },
+    { name: 'last_error_kind', sql: 'ALTER TABLE tracks ADD COLUMN last_error_kind TEXT' },
+    { name: 'state_reason', sql: 'ALTER TABLE tracks ADD COLUMN state_reason TEXT' },
   ];
 
   for (const column of columns) {

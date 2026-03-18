@@ -18,6 +18,7 @@ import { logger } from '../core/logging';
 import { FetchError } from '../core/errors';
 import { recordMetric } from '../telemetry/metrics';
 import { recordAudit } from '../telemetry/audit';
+import { hasDedicatedProfile } from '../profiles';
 
 export async function handleCron(env: EnvBindings): Promise<Response> {
   const repo = new TrackRepository(new D1Client(env.D1_DB));
@@ -52,7 +53,12 @@ async function processTrack(track: DueTrack, repo: TrackRepository, env: EnvBind
         success: true,
         needsManual: track.needs_manual === 1,
       });
-      await repo.updateAfterCheck(track.id, decision.patch);
+      await repo.updateAfterCheck(track.id, {
+        ...decision.patch,
+        last_http_status: null,
+        last_error_kind: null,
+        state_reason: currentSuccessStateReason(track),
+      });
       return;
     }
 
@@ -69,6 +75,7 @@ async function processTrack(track: DueTrack, repo: TrackRepository, env: EnvBind
       success: true,
       needsManual,
     });
+    const stateReason = classifySuccessStateReason(track.site_host, observedStatus, needsManual);
 
     const patch = {
       ...decision.patch,
@@ -78,6 +85,9 @@ async function processTrack(track: DueTrack, repo: TrackRepository, env: EnvBind
       etag: outcome.headers.get('etag') ?? track.etag,
       content_sig: await hashContentSnippet(outcome.html),
       variant_options: variantOptions ? JSON.stringify(variantOptions) : track.variant_options,
+      last_http_status: null,
+      last_error_kind: null,
+      state_reason: stateReason,
     };
 
     if (decision.alert) {
@@ -99,7 +109,12 @@ async function processTrack(track: DueTrack, repo: TrackRepository, env: EnvBind
       success: false,
       needsManual,
     });
-    await repo.updateAfterCheck(track.id, decision.patch);
+    await repo.updateAfterCheck(track.id, {
+      ...decision.patch,
+      last_http_status: err instanceof FetchError ? err.status ?? null : null,
+      last_error_kind: err instanceof FetchError ? err.kind : 'UNKNOWN_ERROR',
+      state_reason: err instanceof FetchError ? err.stateReason : null,
+    });
   }
 }
 
@@ -122,4 +137,20 @@ function resolveVariantStatus(
   const status = match.available ? 'AVAILABLE' : 'NOT_AVAILABLE';
   const summary = track.variant_label ? `${track.variant_label} (${match.available ? 'available' : 'out of stock'})` : track.variant_summary ?? null;
   return { observedStatus: status, variantSummary: summary };
+}
+
+function classifySuccessStateReason(
+  host: string,
+  status: Track['status'],
+  needsManual: boolean
+): Track['state_reason'] {
+  if (needsManual) return 'MANUAL_REVIEW';
+  if (status !== 'UNKNOWN') return null;
+  return hasDedicatedProfile(host) ? 'UNCLASSIFIED_HTML' : 'UNSUPPORTED_SITE';
+}
+
+function currentSuccessStateReason(track: Track): Track['state_reason'] {
+  if (track.needs_manual === 1) return 'MANUAL_REVIEW';
+  if (track.status === 'UNKNOWN') return track.state_reason;
+  return null;
 }

@@ -1,3 +1,5 @@
+import { TrackErrorKind, TrackStateReason } from './types';
+
 export class ValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -21,10 +23,21 @@ export class ParseError extends Error {
 
 export class FetchError extends Error {
   status?: number;
+  kind: TrackErrorKind;
+  stateReason: TrackStateReason | null;
 
-  constructor(message: string, status?: number) {
+  constructor(
+    message: string,
+    options?: {
+      status?: number;
+      kind?: TrackErrorKind;
+      stateReason?: TrackStateReason | null;
+    }
+  ) {
     super(message);
     this.name = 'FetchError';
-    this.status = status;
+    this.status = options?.status;
+    this.kind = options?.kind ?? 'UNKNOWN_ERROR';
+    this.stateReason = options?.stateReason ?? null;
   }
 }

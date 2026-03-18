@@ -28,6 +28,10 @@ const profiles: SiteProfile[] = [
   greenPheasantProfile,
 ];
 
+export function hasDedicatedProfile(host: string): boolean {
+  return profiles.some((p) => p.hosts.some((h) => host.endsWith(h)));
+}
+
 export function applyProfile(host: string, html: string, headers: Headers): ProfileResult {
   const profile = profiles.find((p) => p.hosts.some((h) => host.endsWith(h)));
   if (profile) return profile.parse(html, headers);

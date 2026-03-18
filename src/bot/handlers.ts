@@ -11,6 +11,7 @@ import { ValidationError } from '../core/errors';
 import { recordAudit } from '../telemetry/audit';
 import { recordMetric } from '../telemetry/metrics';
 import { previewProduct } from './preview';
+import { hasDedicatedProfile } from '../profiles';
 
 export interface HandlerDeps {
   repo: TrackRepository;
@@ -275,6 +276,11 @@ export class BotHandler {
         price: preview.price ?? null,
         variant_summary: autoSelect?.label ?? preview.variantsSummary ?? null,
         variant_options: variantOptionsJson,
+        state_reason: getPreviewStateReason(siteHost, preview.status, requiresSelection),
+      });
+    } else {
+      await this.deps.repo.updateAfterCheck(trackId, {
+        state_reason: hasDedicatedProfile(siteHost) ? 'MANUAL_REVIEW' : 'UNSUPPORTED_SITE',
       });
     }
 
@@ -479,6 +485,7 @@ export class BotHandler {
       variant_label: option.label,
       variant_summary: option.label,
       next_check_at: new Date().toISOString(),
+      state_reason: null,
     });
 
     await sendTelegramMessage(
@@ -488,6 +495,16 @@ export class BotHandler {
       'Markdown'
     );
   }
+}
+
+function getPreviewStateReason(
+  siteHost: string,
+  previewStatus: Track['status'],
+  requiresSelection: boolean
+): Track['state_reason'] {
+  if (requiresSelection) return 'PENDING_VARIANT';
+  if (previewStatus !== 'UNKNOWN') return null;
+  return hasDedicatedProfile(siteHost) ? 'UNCLASSIFIED_HTML' : 'UNSUPPORTED_SITE';
 }
 
 interface TelegramInlineKeyboardButton {

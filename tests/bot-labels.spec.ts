@@ -20,6 +20,9 @@ function makeTrack(overrides: Partial<Track> = {}): Track {
     fail_count: 0,
     backoff_sec: 60,
     needs_manual: 0,
+    last_http_status: null,
+    last_error_kind: null,
+    state_reason: null,
     etag: null,
     content_sig: null,
     created_at: '2026-03-18T00:00:00.000Z',
@@ -61,5 +64,46 @@ describe('bot labels', () => {
 
     expect(list).toBe(['#1 Zumblebi Alien', 'jellycat.com • UNKNOWN', 'Last checked: --'].join('\n'));
     expect(list).not.toContain('[select variant]');
+  });
+
+  it('shows concise diagnostic detail for unknown and error rows', () => {
+    const list = formatList([
+      makeTrack({ state_reason: 'PENDING_VARIANT' }),
+      makeTrack({
+        id: 2,
+        status: 'ERROR',
+        last_http_status: 403,
+        state_reason: 'CLOUDFLARE_CHALLENGE',
+      }),
+    ]);
+
+    expect(list).toBe(
+      [
+        '#1 Zumblebi Alien',
+        'jellycat.com • UNKNOWN (pending variant)',
+        'Last checked: --',
+        '',
+        '#2 Zumblebi Alien',
+        'jellycat.com • ERROR (403 cloudflare challenge)',
+        'Last checked: --',
+      ].join('\n')
+    );
+  });
+
+  it('does not duplicate manual review detail in the summary line', () => {
+    const list = formatList([
+      makeTrack({
+        needs_manual: 1,
+        state_reason: 'MANUAL_REVIEW',
+      }),
+    ]);
+
+    expect(list).toBe(
+      [
+        '#1 Zumblebi Alien',
+        'jellycat.com • UNKNOWN (manual review)',
+        'Last checked: --',
+      ].join('\n')
+    );
   });
 });
