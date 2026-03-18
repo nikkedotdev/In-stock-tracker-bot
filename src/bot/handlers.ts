@@ -235,7 +235,7 @@ export class BotHandler {
 
   private async sendList(chatId: number, userDbId: number) {
     const tracks = await this.deps.repo.getActiveTracksByUser(userDbId);
-    await sendTelegramMessage(this.deps.env, chatId, formatList(tracks), 'Markdown');
+    await sendTelegramMessage(this.deps.env, chatId, formatList(tracks));
   }
 
   private async handleTrack(chatId: number, userDbId: number, normalizedUrl: string) {
