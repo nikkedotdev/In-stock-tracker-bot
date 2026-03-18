@@ -2,6 +2,7 @@ import { TrackRepository } from '../db/repos';
 import { MAX_ACTIVE_TRACKS_PER_USER } from '../core/config';
 import { normaliseUrl } from '../core/url';
 import { formatEndConfirmation, formatHelpMessage, formatList, formatRemoveConfirmation, formatRemovePrompt, formatStartMessage, formatTrackingAck, formatVariantPrompt } from './formatter';
+import { getTrackDisplayLabel, getTrackDisplayName } from './labels';
 import { parseCommand } from './commands';
 import { ensureCallbackQuery, ensureMessage } from './validation';
 import { Track, EnvBindings, TelegramUpdate, VariantOption } from '../core/types';
@@ -133,7 +134,12 @@ export class BotHandler {
       await this.deps.repo.deleteTrack(target.id);
       recordAudit('track_removed', { userId: userDbId, trackId: target.id });
       await answerTelegramCallbackQuery(this.deps.env, callback.callbackQueryId, 'Removed');
-      await sendTelegramMessage(this.deps.env, callback.chatId, formatRemoveConfirmation(target.site_host), 'Markdown');
+      await sendTelegramMessage(
+        this.deps.env,
+        callback.chatId,
+        formatRemoveConfirmation(getTrackDisplayName(target), target.site_host),
+        'Markdown'
+      );
     }
 
     await clearTelegramInlineKeyboard(this.deps.env, callback.chatId, callback.messageId).catch((err) => {
@@ -177,7 +183,7 @@ export class BotHandler {
     await sendTelegramMessage(
       this.deps.env,
       callback.chatId,
-      this.formatVariantPickerMessage(trackIdx + 1, target.site_host),
+      this.formatVariantPickerMessage(trackIdx + 1, getTrackDisplayName(target), target.site_host),
       'Markdown',
       buildVariantOptionKeyboard(target.id, options)
     );
@@ -281,12 +287,17 @@ export class BotHandler {
       await sendTelegramMessage(
         this.deps.env,
         chatId,
-        formatVariantPrompt(index, siteHost, variantOptions),
+        formatVariantPrompt(index, preview?.title?.trim() || siteHost, siteHost, variantOptions),
         'Markdown',
         buildVariantOptionKeyboard(trackId, variantOptions)
       );
     } else {
-      await sendTelegramMessage(this.deps.env, chatId, formatTrackingAck(index, siteHost), 'Markdown');
+      await sendTelegramMessage(
+        this.deps.env,
+        chatId,
+        formatTrackingAck(index, preview?.title?.trim() || siteHost, siteHost),
+        'Markdown'
+      );
     }
   }
 
@@ -324,7 +335,12 @@ export class BotHandler {
 
     await this.deps.repo.deleteTrack(target.id);
     recordAudit('track_removed', { userId: userDbId, trackId: target.id });
-    await sendTelegramMessage(this.deps.env, chatId, formatRemoveConfirmation(target.site_host), 'Markdown');
+    await sendTelegramMessage(
+      this.deps.env,
+      chatId,
+      formatRemoveConfirmation(getTrackDisplayName(target), target.site_host),
+      'Markdown'
+    );
   }
 
   private async handleEnd(chatId: number, userDbId: number) {
@@ -419,7 +435,7 @@ export class BotHandler {
       await sendTelegramMessage(
         this.deps.env,
         chatId,
-        this.formatVariantPickerMessage(trackIdx + 1, track.site_host),
+        this.formatVariantPickerMessage(trackIdx + 1, getTrackDisplayName(track), track.site_host),
         'Markdown',
         buildVariantOptionKeyboard(track.id, this.getVariantOptions(track))
       );
@@ -452,8 +468,9 @@ export class BotHandler {
     }
   }
 
-  private formatVariantPickerMessage(order: number, host: string): string {
-    return `Tracking #${order}: **${host}** has multiple options.\nPick a variant:`;
+  private formatVariantPickerMessage(order: number, displayName: string, host: string): string {
+    const label = displayName === host ? `**${host}**` : `**${displayName}** (${host})`;
+    return `Tracking #${order}: ${label} has multiple options.\nPick a variant:`;
   }
 
   private async selectVariant(chatId: number, track: Track, trackIdx: number, option: VariantOption) {
@@ -467,7 +484,7 @@ export class BotHandler {
     await sendTelegramMessage(
       this.deps.env,
       chatId,
-      `Tracking #${trackIdx + 1}: now monitoring **${option.label}**`,
+      `Tracking #${trackIdx + 1}: now monitoring **${getTrackDisplayName(track)}** [${option.label}]`,
       'Markdown'
     );
   }
@@ -519,14 +536,12 @@ function buildVariantOptionKeyboard(trackId: number, options: VariantOption[]): 
 }
 
 function formatRemoveButtonLabel(track: Track, order: number): string {
-  const suffix = track.variant_label ? ` [${track.variant_label}]` : '';
-  const raw = `#${order} ${track.site_host}${suffix}`;
+  const raw = `#${order} ${getTrackDisplayLabel(track, false)}`;
   return raw.length <= 50 ? raw : `${raw.slice(0, 47)}...`;
 }
 
 function formatVariantTrackButtonLabel(track: Track, order: number): string {
-  const suffix = track.variant_label ? ` [${track.variant_label}]` : '';
-  const raw = `#${order} ${track.site_host}${suffix}`;
+  const raw = `#${order} ${getTrackDisplayLabel(track, false)}`;
   return raw.length <= 60 ? raw : `${raw.slice(0, 57)}...`;
 }
 
