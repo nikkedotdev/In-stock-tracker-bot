@@ -37,14 +37,24 @@ export function formatVariantPrompt(order: number, displayName: string, host: st
 export function formatList(tracks: Track[]): string {
   if (tracks.length === 0) return 'You have no active tracks. Send me a product URL to begin.';
   const rows = tracks.map((track, idx) => {
-    const flags = track.needs_manual ? '⚠ manual' : '';
     const last = track.last_checked_at ?? '--';
     const label = getTrackDisplayLabel(track, false);
     const selectionState = !track.variant_label && track.variant_options ? ' [select variant]' : '';
-    const host = getTrackDisplayName(track) === track.site_host ? '' : ` | ${track.site_host}`;
-    return `#${idx + 1} ${label}${selectionState}${host} | ${track.status} | ${last} ${flags}`.trim();
+    const summary = [
+      getTrackDisplayName(track) === track.site_host ? null : track.site_host,
+      track.status,
+      track.needs_manual ? 'manual' : null,
+    ]
+      .filter((part): part is string => Boolean(part))
+      .join(' • ');
+
+    return [
+      `#${idx + 1} ${label}${selectionState}`,
+      summary,
+      `Last checked: ${last}`,
+    ].join('\n');
   });
-  return ['```', ...rows, '```'].join('\n');
+  return rows.join('\n\n');
 }
 
 export function formatRemoveConfirmation(displayName: string, host: string): string {

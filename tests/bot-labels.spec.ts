@@ -43,7 +43,16 @@ describe('bot labels', () => {
   it('uses title first in /list output and falls back to host when missing', () => {
     const list = formatList([makeTrack(), makeTrack({ id: 2, title: null })]);
 
-    expect(list).toContain('#1 Zumblebi Alien | jellycat.com | UNKNOWN | --');
-    expect(list).toContain('#2 jellycat.com | UNKNOWN | --');
+    expect(list).toBe(
+      [
+        '#1 Zumblebi Alien',
+        'jellycat.com • UNKNOWN',
+        'Last checked: --',
+        '',
+        '#2 jellycat.com',
+        'UNKNOWN',
+        'Last checked: --',
+      ].join('\n')
+    );
   });
 });
