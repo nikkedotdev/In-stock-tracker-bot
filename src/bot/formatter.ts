@@ -39,7 +39,7 @@ export function formatList(tracks: Track[]): string {
   const rows = tracks.map((track, idx) => {
     const last = track.last_checked_at ?? '--';
     const label = getTrackDisplayLabel(track, false);
-    const selectionState = !track.variant_label && track.variant_options ? ' [select variant]' : '';
+    const selectionState = !track.variant_label && hasSelectableVariantOptions(track.variant_options) ? ' [select variant]' : '';
     const summary = [
       getTrackDisplayName(track) === track.site_host ? null : track.site_host,
       track.status,
@@ -55,6 +55,16 @@ export function formatList(tracks: Track[]): string {
     ].join('\n');
   });
   return rows.join('\n\n');
+}
+
+function hasSelectableVariantOptions(variantOptions: Track['variant_options']): boolean {
+  if (!variantOptions) return false;
+  try {
+    const parsed = JSON.parse(variantOptions) as unknown;
+    return Array.isArray(parsed) && parsed.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 export function formatRemoveConfirmation(displayName: string, host: string): string {
