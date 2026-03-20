@@ -5,6 +5,19 @@ export type Status =
   | 'AVAILABLE'
   | 'ERROR';
 
+export type TrackErrorKind = 'HTTP' | 'TIMEOUT' | 'NETWORK' | 'PARSE' | 'UNKNOWN_ERROR';
+
+export type TrackStateReason =
+  | 'PENDING_VARIANT'
+  | 'UNCLASSIFIED_HTML'
+  | 'UNSUPPORTED_SITE'
+  | 'RATE_LIMITED'
+  | 'CLOUDFLARE_CHALLENGE'
+  | 'FETCH_BLOCKED'
+  | 'TIMEOUT'
+  | 'NETWORK_ERROR'
+  | 'MANUAL_REVIEW';
+
 export interface User {
   id: number;
   tg_user_id: string;
@@ -28,6 +41,9 @@ export interface Track {
   fail_count: number;
   backoff_sec: number;
   needs_manual: number;
+  last_http_status: number | null;
+  last_error_kind: TrackErrorKind | null;
+  state_reason: TrackStateReason | null;
   etag?: string | null;
   content_sig?: string | null;
   created_at: string;
@@ -122,6 +138,9 @@ export type TrackUpdatePatch = Partial<
     | 'fail_count'
     | 'backoff_sec'
     | 'needs_manual'
+    | 'last_http_status'
+    | 'last_error_kind'
+    | 'state_reason'
     | 'etag'
     | 'content_sig'
     | 'title'

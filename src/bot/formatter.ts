@@ -34,6 +34,11 @@ export function formatVariantPrompt(order: number, displayName: string, host: st
   return lines.join('\n');
 }
 
+export function formatManualReviewNotice(displayName: string, host: string): string {
+  const label = displayName === host ? host : `${displayName} (${host})`;
+  return `Heads up: ${label} may be blocked or unreliable right now, so I will keep tracking it but its current status may be wrong. Use /list for details.`;
+}
+
 export function formatList(tracks: Track[]): string {
   if (tracks.length === 0) return 'You have no active tracks. Send me a product URL to begin.';
   const rows = tracks.map((track, idx) => {
@@ -42,8 +47,8 @@ export function formatList(tracks: Track[]): string {
     const selectionState = !track.variant_label && hasSelectableVariantOptions(track.variant_options) ? ' [select variant]' : '';
     const summary = [
       getTrackDisplayName(track) === track.site_host ? null : track.site_host,
-      track.status,
-      track.needs_manual ? 'manual' : null,
+      formatStatusSummary(track),
+      track.needs_manual && track.state_reason !== 'MANUAL_REVIEW' ? 'manual' : null,
     ]
       .filter((part): part is string => Boolean(part))
       .join(' • ');
@@ -55,6 +60,41 @@ export function formatList(tracks: Track[]): string {
     ].join('\n');
   });
   return rows.join('\n\n');
+}
+
+function formatStatusSummary(track: Track): string {
+  const detail = formatDiagnosticDetail(track);
+  return detail ? `${track.status} (${detail})` : track.status;
+}
+
+function formatDiagnosticDetail(track: Track): string | null {
+  if (track.status === 'ERROR') {
+    if (track.last_http_status === 403 && track.state_reason === 'CLOUDFLARE_CHALLENGE') {
+      return '403 cloudflare challenge';
+    }
+    if (track.last_http_status === 429 && track.state_reason === 'RATE_LIMITED') {
+      return '429 rate limited';
+    }
+  }
+
+  switch (track.state_reason) {
+    case 'PENDING_VARIANT':
+      return 'pending variant';
+    case 'UNSUPPORTED_SITE':
+      return 'unsupported site';
+    case 'UNCLASSIFIED_HTML':
+      return 'unclassified html';
+    case 'TIMEOUT':
+      return 'timeout';
+    case 'NETWORK_ERROR':
+      return 'network error';
+    case 'FETCH_BLOCKED':
+      return 'fetch blocked';
+    case 'MANUAL_REVIEW':
+      return 'manual review';
+    default:
+      return null;
+  }
 }
 
 function hasSelectableVariantOptions(variantOptions: Track['variant_options']): boolean {

@@ -15,14 +15,13 @@ export class MockD1Database implements D1Database {
   private trackSeq = 1;
 
   prepare(query: string) {
-    const db = this;
     return {
-      bind(...params: unknown[]) {
+      bind: (...params: unknown[]) => {
         const bound = params;
         return {
-          run: async () => db.execRun(query, bound),
-          all: async () => ({ results: db.execSelect(query, bound) }),
-          first: async () => db.execSelect(query, bound)[0] ?? null,
+          run: async () => this.execRun(query, bound),
+          all: async () => ({ results: this.execSelect(query, bound) }),
+          first: async () => this.execSelect(query, bound)[0] ?? null,
         };
       },
     } as D1PreparedStatement;
@@ -50,7 +49,7 @@ export class MockD1Database implements D1Database {
     return this.route(query, params);
   }
 
-  private route(query: string, params: unknown[]): any[] {
+  private route(query: string, params: unknown[]): unknown[] {
     if (query.startsWith('INSERT INTO users')) {
       const tgId = String(params[0]);
       let user = this.users.find((u) => u.tg_user_id === tgId);
@@ -83,6 +82,9 @@ export class MockD1Database implements D1Database {
         fail_count: 0,
         backoff_sec: 60,
         needs_manual: 0,
+        last_http_status: null,
+        last_error_kind: null,
+        state_reason: null,
         created_at: new Date().toISOString(),
         last_checked_at: null,
         next_check_at: nextCheck,

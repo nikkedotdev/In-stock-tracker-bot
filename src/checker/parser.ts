@@ -57,7 +57,7 @@ function detectCtaEnabled(html: string): boolean {
   const tagRegex = /<(button|a)\b([^>]*)>(.*?)<\/\1>/gis;
   let match: RegExpExecArray | null;
   while ((match = tagRegex.exec(html)) !== null) {
-    const [, tagName, attrsRaw, innerRaw] = match;
+    const [, , attrsRaw, innerRaw] = match;
     if (CTA_DISABLED_REGEX.test(attrsRaw) || /class="[^"]*(disabled|unavailable)[^"]*"/i.test(attrsRaw)) {
       continue;
     }

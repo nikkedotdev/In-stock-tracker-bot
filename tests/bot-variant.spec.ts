@@ -71,6 +71,46 @@ describe('variant picker flows', () => {
     expect(tracks).toHaveLength(1);
     expect(tracks[0].next_check_at).toBeNull();
     expect(tracks[0].variant_id).toBeNull();
+    expect(tracks[0].state_reason).toBe('PENDING_VARIANT');
+  });
+
+  it('marks unsupported hosts as unsupported when preview stays unknown', async () => {
+    previewProductMock.mockResolvedValue({
+      status: 'UNKNOWN',
+      signals: {
+        ctaTexts: [],
+        ctaEnabled: false,
+        oosTexts: [],
+        soonTexts: [],
+      },
+      title: 'Unknown Item',
+    });
+
+    await handler.handle(messageUpdate('https://shop.example/item'));
+
+    const userId = await repo.upsertUser('123');
+    const tracks = await repo.getActiveTracksByUser(userId);
+    expect(tracks).toHaveLength(1);
+    expect(tracks[0].status).toBe('UNKNOWN');
+    expect(tracks[0].state_reason).toBe('UNSUPPORTED_SITE');
+  });
+
+  it('marks preview failures for supported hosts as manual review', async () => {
+    previewProductMock.mockRejectedValue(new Error('Failed to fetch product: 403'));
+
+    await handler.handle(messageUpdate('https://jellycat.com/test-item/'));
+
+    const userId = await repo.upsertUser('123');
+    const tracks = await repo.getActiveTracksByUser(userId);
+    expect(tracks).toHaveLength(1);
+    expect(tracks[0].status).toBe('UNKNOWN');
+    expect(tracks[0].state_reason).toBe('MANUAL_REVIEW');
+
+    const messages = endpointBodies(fetchMock, '/sendMessage');
+    expect(messages).toHaveLength(2);
+    expect(messages[0].text).toContain('Tracking #1: **jellycat.com** - I will notify you when it is available.');
+    expect(messages[1].text).toContain('may be blocked or unreliable right now');
+    expect(messages[1].text).toContain('Use /list for details.');
   });
 
   it('opens URL-first picker for /variant when multiple tracked URLs have variants', async () => {

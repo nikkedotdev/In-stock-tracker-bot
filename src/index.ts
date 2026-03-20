@@ -46,7 +46,7 @@ export default {
     return new Response('Not found', { status: 404 });
   },
 
-  async scheduled(event: ScheduledEvent, env: EnvBindings, ctx: ExecutionContext) {
+  async scheduled(event: ScheduledEvent, env: EnvBindings) {
     setLogLevel(env);
     await ensureMigrations(env);
     await handleCron(env);
