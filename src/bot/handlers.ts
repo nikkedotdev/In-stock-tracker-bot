@@ -1,7 +1,17 @@
 import { TrackRepository } from '../db/repos';
 import { MAX_ACTIVE_TRACKS_PER_USER } from '../core/config';
 import { normaliseUrl } from '../core/url';
-import { formatEndConfirmation, formatHelpMessage, formatList, formatRemoveConfirmation, formatRemovePrompt, formatStartMessage, formatTrackingAck, formatVariantPrompt } from './formatter';
+import {
+  formatEndConfirmation,
+  formatHelpMessage,
+  formatList,
+  formatManualReviewNotice,
+  formatRemoveConfirmation,
+  formatRemovePrompt,
+  formatStartMessage,
+  formatTrackingAck,
+  formatVariantPrompt,
+} from './formatter';
 import { getTrackDisplayLabel, getTrackDisplayName } from './labels';
 import { parseCommand } from './commands';
 import { ensureCallbackQuery, ensureMessage } from './validation';
@@ -263,6 +273,8 @@ export class BotHandler {
     const autoSelect = variantOptions.length === 1 ? variantOptions[0] : null;
     const variantOptionsJson = variantOptions.length ? JSON.stringify(variantOptions) : null;
     const nextCheckAt = requiresSelection ? null : new Date().toISOString();
+    const previewStateReason = preview ? getPreviewStateReason(siteHost, preview.status, requiresSelection) : null;
+    const fallbackStateReason = hasDedicatedProfile(siteHost) ? 'MANUAL_REVIEW' : 'UNSUPPORTED_SITE';
 
     const trackId = await this.deps.repo.insertTrack(userDbId, cleanUrl, siteHost, urlHash, nextCheckAt, {
       variantId: autoSelect?.id ?? null,
@@ -276,11 +288,11 @@ export class BotHandler {
         price: preview.price ?? null,
         variant_summary: autoSelect?.label ?? preview.variantsSummary ?? null,
         variant_options: variantOptionsJson,
-        state_reason: getPreviewStateReason(siteHost, preview.status, requiresSelection),
+        state_reason: previewStateReason,
       });
     } else {
       await this.deps.repo.updateAfterCheck(trackId, {
-        state_reason: hasDedicatedProfile(siteHost) ? 'MANUAL_REVIEW' : 'UNSUPPORTED_SITE',
+        state_reason: fallbackStateReason,
       });
     }
 
@@ -304,6 +316,11 @@ export class BotHandler {
         formatTrackingAck(index, preview?.title?.trim() || siteHost, siteHost),
         'Markdown'
       );
+    }
+
+    const finalStateReason = preview ? previewStateReason : fallbackStateReason;
+    if (shouldNotifyManualReview(null, finalStateReason)) {
+      await sendTelegramMessage(this.deps.env, chatId, formatManualReviewNotice(preview?.title?.trim() || siteHost, siteHost));
     }
   }
 
@@ -505,6 +522,10 @@ function getPreviewStateReason(
   if (requiresSelection) return 'PENDING_VARIANT';
   if (previewStatus !== 'UNKNOWN') return null;
   return hasDedicatedProfile(siteHost) ? 'UNCLASSIFIED_HTML' : 'UNSUPPORTED_SITE';
+}
+
+function shouldNotifyManualReview(previous: Track['state_reason'] | null, next: Track['state_reason'] | null): boolean {
+  return previous !== 'MANUAL_REVIEW' && next === 'MANUAL_REVIEW';
 }
 
 interface TelegramInlineKeyboardButton {

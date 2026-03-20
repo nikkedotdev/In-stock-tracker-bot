@@ -34,6 +34,11 @@ export function formatVariantPrompt(order: number, displayName: string, host: st
   return lines.join('\n');
 }
 
+export function formatManualReviewNotice(displayName: string, host: string): string {
+  const label = displayName === host ? host : `${displayName} (${host})`;
+  return `Heads up: ${label} may be blocked or unreliable right now, so I will keep tracking it but its current status may be wrong. Use /list for details.`;
+}
+
 export function formatList(tracks: Track[]): string {
   if (tracks.length === 0) return 'You have no active tracks. Send me a product URL to begin.';
   const rows = tracks.map((track, idx) => {

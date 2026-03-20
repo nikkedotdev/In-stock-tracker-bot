@@ -30,8 +30,10 @@ vi.mock('../src/core/logging', () => ({
 
 import { fetchTrack } from '../src/checker/fetcher';
 import { handleCron } from '../src/checker/scheduler';
+import { sendTelegramMessage } from '../src/bot/handlers';
 
 const fetchTrackMock = vi.mocked(fetchTrack);
+const sendTelegramMessageMock = vi.mocked(sendTelegramMessage);
 
 describe('handleCron diagnostics', () => {
   let db: MockD1Database;
@@ -90,5 +92,33 @@ describe('handleCron diagnostics', () => {
     expect(track.last_http_status).toBe(429);
     expect(track.last_error_kind).toBe('HTTP');
     expect(track.state_reason).toBe('RATE_LIMITED');
+  });
+
+  it('sends an informational notice when a track first enters manual review', async () => {
+    const userId = await repo.upsertUser('123');
+    const trackId = await repo.insertTrack(userId, 'https://jellycat.com/test-product/', 'jellycat.com', 'hash1', '2024-01-01T00:00:00.000Z');
+    await repo.updateAfterCheck(trackId, {
+      title: 'Test Product',
+      last_checked_at: '2024-01-01T00:00:00.000Z',
+    });
+    fetchTrackMock.mockResolvedValue({
+      status: 'ok',
+      url: 'https://jellycat.com/test-product/',
+      finalUrl: 'https://jellycat.com/test-product/',
+      html: '<html><body><h1>Test Product</h1><p>captcha</p></body></html>',
+      headers: new Headers(),
+    });
+
+    await handleCron(env);
+
+    expect(sendTelegramMessageMock).toHaveBeenCalledTimes(1);
+    expect(sendTelegramMessageMock).toHaveBeenCalledWith(
+      env,
+      123,
+      expect.stringContaining('may be blocked or unreliable right now')
+    );
+
+    const [track] = await repo.getActiveTracksByUser(userId);
+    expect(track.state_reason).toBe('MANUAL_REVIEW');
   });
 });

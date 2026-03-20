@@ -12,7 +12,7 @@ import { parsePage } from './parser';
 import { normalise } from './normaliser';
 import { applyTransition } from './transitions';
 import { hashContentSnippet } from '../core/signatures';
-import { formatAlert } from '../bot/formatter';
+import { formatAlert, formatManualReviewNotice } from '../bot/formatter';
 import { sendTelegramMessage } from '../bot/handlers';
 import { logger } from '../core/logging';
 import { FetchError } from '../core/errors';
@@ -90,6 +90,8 @@ async function processTrack(track: DueTrack, repo: TrackRepository, env: EnvBind
       state_reason: stateReason,
     };
 
+    const enteredManualReview = shouldNotifyManualReview(currentSuccessStateReason(track), stateReason);
+
     if (decision.alert) {
       const chatId = Number(track.tg_user_id);
       await sendTelegramMessage(env, chatId, formatAlert({ ...track, ...patch } as Track), 'Markdown');
@@ -98,6 +100,13 @@ async function processTrack(track: DueTrack, repo: TrackRepository, env: EnvBind
       await repo.deleteTrack(track.id);
     } else {
       await repo.updateAfterCheck(track.id, patch);
+      if (enteredManualReview) {
+        await sendTelegramMessage(
+          env,
+          Number(track.tg_user_id),
+          formatManualReviewNotice(patch.title ?? track.title ?? track.site_host, track.site_host)
+        );
+      }
     }
   } catch (err) {
     logger.warn('Track processing failed', { id: track.id, error: (err as Error).message });
@@ -153,4 +162,8 @@ function currentSuccessStateReason(track: Track): Track['state_reason'] {
   if (track.needs_manual === 1) return 'MANUAL_REVIEW';
   if (track.status === 'UNKNOWN') return track.state_reason;
   return null;
+}
+
+function shouldNotifyManualReview(previous: Track['state_reason'] | null, next: Track['state_reason'] | null): boolean {
+  return previous !== 'MANUAL_REVIEW' && next === 'MANUAL_REVIEW';
 }

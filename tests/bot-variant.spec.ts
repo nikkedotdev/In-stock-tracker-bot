@@ -105,6 +105,12 @@ describe('variant picker flows', () => {
     expect(tracks).toHaveLength(1);
     expect(tracks[0].status).toBe('UNKNOWN');
     expect(tracks[0].state_reason).toBe('MANUAL_REVIEW');
+
+    const messages = endpointBodies(fetchMock, '/sendMessage');
+    expect(messages).toHaveLength(2);
+    expect(messages[0].text).toContain('Tracking #1: **jellycat.com** - I will notify you when it is available.');
+    expect(messages[1].text).toContain('may be blocked or unreliable right now');
+    expect(messages[1].text).toContain('Use /list for details.');
   });
 
   it('opens URL-first picker for /variant when multiple tracked URLs have variants', async () => {
