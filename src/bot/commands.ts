@@ -16,7 +16,7 @@ export interface CommandResult {
   argument?: string;
 }
 
-const URL_REGEX = /https?:\/\/[\w.-]+(?:\/[\w\d./?&%#=+_-]*)?/i;
+const URL_REGEX = /https?:\/\/[\w.-]+(?:\/[\w\d./?&%#=+_\u0080-\uFFFF-]*)?/iu;
 
 export async function parseCommand(text?: string): Promise<CommandResult> {
   if (!text) return { type: 'unknown' };

@@ -100,11 +100,8 @@ export class TrackRepository {
   }
 
   async deleteAllByUser(userId: number): Promise<number> {
-    const sql = 'DELETE FROM tracks WHERE user_id = ?';
-    const before = await this.client
-      .prepare<{ count: number }>('SELECT COUNT(*) as count FROM tracks WHERE user_id = ?')
-      .first([userId]);
-    await this.client.prepare(sql).run([userId]);
-    return before?.count ?? 0;
+    const result = await this.client.prepare('DELETE FROM tracks WHERE user_id = ?').run([userId]);
+    // D1Result exposes meta.changes with the number of rows affected
+    return (result as unknown as { meta?: { changes?: number } })?.meta?.changes ?? 0;
   }
 }

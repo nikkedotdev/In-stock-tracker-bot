@@ -4,6 +4,13 @@ node_modules/
 
 # build artifacts
 *.log
+dist/
 
 # CF previews
 wrangler-state.json
+
+# local environment and secrets
+.dev.vars
+.env
+.env.local
+*.local
