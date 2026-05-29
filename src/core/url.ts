@@ -22,11 +22,19 @@ async function sha256Hex(input: string): Promise<string> {
   return bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+function isPrivateIPv4(octets: number[]): boolean {
+  const [a, b] = octets;
+  if (a === 127) return true;                        // 127.x.x.x loopback
+  if (a === 10) return true;                         // 10.x.x.x private
+  if (a === 192 && b === 168) return true;           // 192.168.x.x private
+  if (a === 172 && b >= 16 && b <= 31) return true; // 172.16-31.x.x private
+  if (a === 169 && b === 254) return true;           // 169.254.x.x link-local/metadata
+  if (a === 0) return true;                          // 0.x.x.x
+  return false;
+}
+
 function isPrivateHost(hostname: string): boolean {
   const h = hostname.toLowerCase();
-
-  // IPv6 localhost
-  if (h === '::1' || h === '[::1]') return true;
 
   // Named loopback and special addresses
   if (h === 'localhost' || h === '0.0.0.0') return true;
@@ -39,15 +47,27 @@ function isPrivateHost(hostname: string): boolean {
   if (parts.length === 4) {
     const octets = parts.map(Number);
     if (octets.every((o) => !Number.isNaN(o) && o >= 0 && o <= 255)) {
-      const [a, b, c] = octets;
-      if (a === 127) return true;                                       // 127.x.x.x loopback
-      if (a === 10) return true;                                        // 10.x.x.x private
-      if (a === 192 && b === 168) return true;                         // 192.168.x.x private
-      if (a === 172 && b >= 16 && b <= 31) return true;               // 172.16-31.x.x private
-      if (a === 169 && b === 254) return true;                         // 169.254.x.x link-local/metadata
-      if (a === 0) return true;                                        // 0.x.x.x
+      return isPrivateIPv4(octets);
     }
   }
+
+  // IPv6: loopback (::1) and unspecified (::)
+  if (bare === '::1' || bare === '::') return true;
+
+  // IPv4-mapped IPv6: ::ffff:x.x.x.x
+  const ipv4Mapped = bare.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (ipv4Mapped) {
+    const embeddedOctets = ipv4Mapped[1].split('.').map(Number);
+    if (embeddedOctets.every((o) => !Number.isNaN(o) && o >= 0 && o <= 255)) {
+      return isPrivateIPv4(embeddedOctets);
+    }
+  }
+
+  // ULA: fc00::/7 — starts with fc or fd
+  if (/^f[cd][0-9a-f]{0,2}:/i.test(bare)) return true;
+
+  // Link-local: fe80::/10 — starts with fe8x, fe9x, feax, febx
+  if (/^fe[89ab][0-9a-f]?:/i.test(bare)) return true;
 
   return false;
 }
