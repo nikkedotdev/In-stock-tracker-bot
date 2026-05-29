@@ -54,13 +54,22 @@ function isPrivateHost(hostname: string): boolean {
   // IPv6: loopback (::1) and unspecified (::)
   if (bare === '::1' || bare === '::') return true;
 
-  // IPv4-mapped IPv6: ::ffff:x.x.x.x
+  // IPv4-mapped IPv6 dotted-quad form: ::ffff:x.x.x.x
   const ipv4Mapped = bare.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
   if (ipv4Mapped) {
     const embeddedOctets = ipv4Mapped[1].split('.').map(Number);
     if (embeddedOctets.every((o) => !Number.isNaN(o) && o >= 0 && o <= 255)) {
       return isPrivateIPv4(embeddedOctets);
     }
+  }
+
+  // IPv4-mapped IPv6 hex form: ::ffff:XXXX:XXXX (WHATWG canonical form)
+  // e.g. ::ffff:127.0.0.1 is canonicalized to ::ffff:7f00:1 by the URL parser
+  const ipv4MappedHex = bare.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i);
+  if (ipv4MappedHex) {
+    const high = parseInt(ipv4MappedHex[1], 16);
+    const low = parseInt(ipv4MappedHex[2], 16);
+    return isPrivateIPv4([(high >> 8) & 0xff, high & 0xff, (low >> 8) & 0xff, low & 0xff]);
   }
 
   // ULA: fc00::/7 — starts with fc or fd
