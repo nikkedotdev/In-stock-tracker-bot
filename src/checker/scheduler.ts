@@ -128,7 +128,12 @@ async function processTrack(track: DueTrack, repo: TrackRepository, env: EnvBind
 }
 
 function detectManualBlock(html: string): boolean {
-  return /captcha|enable javascript|region restriction/i.test(html);
+  return (
+    /<form[^>]*captcha/i.test(html) ||
+    /id=["']captcha/i.test(html) ||
+    /<title[^>]*>.*?enable javascript/i.test(html) ||
+    /region.{0,20}restriction/i.test(html)
+  );
 }
 
 function resolveVariantStatus(

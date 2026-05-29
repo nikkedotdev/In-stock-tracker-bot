@@ -31,7 +31,7 @@ export class RateLimiter {
         this.globalActive += 1;
         return;
       }
-      await new Promise((resolve) => setTimeout(resolve, 25));
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
   }
 
