@@ -39,7 +39,7 @@ export class TrackRepository {
   }
 
   async getActiveTracksByUser(userId: number): Promise<Track[]> {
-    const sql = 'SELECT * FROM tracks WHERE user_id = ? ORDER BY id ASC LIMIT 3';
+    const sql = 'SELECT * FROM tracks WHERE user_id = ? ORDER BY id ASC';
     const stmt = this.client.prepare<Track>(sql);
     const { results } = await stmt.all([userId]);
     return results;

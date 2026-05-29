@@ -5,12 +5,13 @@ import { logger, LogLevel } from './core/logging';
 import { D1Client } from './db/d1';
 import { runMigrations } from './db/migrations';
 
-let migrated = false;
+let migrationPromise: Promise<void> | null = null;
 
 async function ensureMigrations(env: EnvBindings) {
-  if (migrated) return;
-  await runMigrations(new D1Client(env.D1_DB));
-  migrated = true;
+  if (!migrationPromise) {
+    migrationPromise = runMigrations(new D1Client(env.D1_DB));
+  }
+  await migrationPromise;
 }
 
 function setLogLevel(env: EnvBindings) {
