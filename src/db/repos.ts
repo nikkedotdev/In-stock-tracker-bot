@@ -60,7 +60,33 @@ export class TrackRepository {
   }
 
   async updateAfterCheck(trackId: number, patch: TrackUpdatePatch): Promise<void> {
-    const entries = Object.entries(patch);
+    const ALLOWED_FIELDS = new Set<string>([
+      'status',
+      'status_conf_count',
+      'fail_count',
+      'backoff_sec',
+      'needs_manual',
+      'last_http_status',
+      'last_error_kind',
+      'state_reason',
+      'etag',
+      'content_sig',
+      'title',
+      'price',
+      'variant_summary',
+      'variant_id',
+      'variant_label',
+      'variant_options',
+      'last_checked_at',
+      'next_check_at',
+    ]);
+
+    const entries = Object.entries(patch).filter(([key]) => {
+      if (!ALLOWED_FIELDS.has(key)) {
+        throw new Error(`Invalid field name in patch: ${key}`);
+      }
+      return true;
+    });
     if (entries.length === 0) return;
 
     const sets = entries.map(([key]) => `${key} = ?`);

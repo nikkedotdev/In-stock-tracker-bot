@@ -8,5 +8,5 @@ crons = ["* * * * *"]
 [[d1_databases]]
 binding = "D1_DB"
 database_name = "instock_db"
-database_id = "0c171092-618e-42a8-93d7-8c0816a6d7ed"
-preview_database_id = "de785ea3-0677-45e5-8376-1ed86e26806a"
+database_id = "YOUR_D1_DATABASE_ID"  # Set your actual database ID
+preview_database_id = "YOUR_PREVIEW_D1_DATABASE_ID"  # Set your preview database ID
