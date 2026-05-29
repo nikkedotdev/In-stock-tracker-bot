@@ -81,6 +81,8 @@ export interface VariantOption {
 export interface EnvBindings {
   D1_DB: D1Database;
   TELEGRAM_BOT_TOKEN: string;
+  CRON_SECRET: string;
+  WEBHOOK_SECRET: string;
   LOG_LEVEL?: string;
   MAX_GLOBAL_CONCURRENCY?: string;
   REQUEST_TIMEOUT_MS?: string;

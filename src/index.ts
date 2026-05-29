@@ -39,6 +39,11 @@ export default {
     }
 
     if (request.method === 'POST' && url.pathname === '/cron') {
+      const authHeader = request.headers.get('Authorization');
+      const expectedToken = env.CRON_SECRET;
+      if (!authHeader || authHeader !== `Bearer ${expectedToken}`) {
+        return new Response('Unauthorized', { status: 401 });
+      }
       await ensureMigrations(env);
       return handleCron(env);
     }
