@@ -9,7 +9,10 @@ let migrationPromise: Promise<void> | null = null;
 
 async function ensureMigrations(env: EnvBindings) {
   if (!migrationPromise) {
-    migrationPromise = runMigrations(new D1Client(env.D1_DB));
+    migrationPromise = runMigrations(new D1Client(env.D1_DB)).catch((err) => {
+      migrationPromise = null;
+      throw err;
+    });
   }
   await migrationPromise;
 }
