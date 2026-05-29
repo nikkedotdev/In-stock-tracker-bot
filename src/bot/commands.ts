@@ -25,8 +25,12 @@ export async function parseCommand(text?: string): Promise<CommandResult> {
     const match = trimmed.match(URL_REGEX);
     if (match) {
       const url = match[0];
-      const { normalizedUrl } = await normaliseUrl(url);
-      return { type: 'track-url', argument: normalizedUrl };
+      try {
+        const { normalizedUrl } = await normaliseUrl(url);
+        return { type: 'track-url', argument: normalizedUrl };
+      } catch (err) {
+        throw new ValidationError((err as Error).message || 'Invalid or unsupported URL');
+      }
     }
     return { type: 'unknown' };
   }
