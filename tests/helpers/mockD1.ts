@@ -41,12 +41,23 @@ export class MockD1Database implements D1Database {
   }
 
   private execRun(query: string, params: unknown[]) {
-    this.route(query, params);
-    return {};
+    return this.routeRun(query, params);
   }
 
   private execSelect(query: string, params: unknown[]) {
     return this.route(query, params);
+  }
+
+  private routeRun(query: string, params: unknown[]): D1Result<unknown> {
+    if (query === 'DELETE FROM tracks WHERE user_id = ?') {
+      const userId = Number(params[0]);
+      const before = this.tracks.length;
+      this.tracks = this.tracks.filter((t) => t.user_id !== userId);
+      return { meta: { changes: before - this.tracks.length } } as D1Result<unknown>;
+    }
+
+    this.route(query, params);
+    return {};
   }
 
   private route(query: string, params: unknown[]): unknown[] {

@@ -129,6 +129,7 @@ async function processTrack(track: DueTrack, repo: TrackRepository, env: EnvBind
 
 function detectManualBlock(html: string): boolean {
   return (
+    /\bcaptcha\b/i.test(html) ||
     /<form[^>]*captcha/i.test(html) ||
     /id=["']captcha/i.test(html) ||
     /<title[^>]*>.*?enable javascript/i.test(html) ||
