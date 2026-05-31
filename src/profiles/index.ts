@@ -5,6 +5,7 @@ import { amazonUkProfile } from './sites/amazon.co.uk';
 import { jellycatProfile } from './sites/jellycat.com';
 import { noodollProfile } from './sites/noodoll.com';
 import { greenPheasantProfile } from './sites/greenpheasantgifts.co.uk';
+import { friedpotatoProfile } from './sites/friedpotato.com';
 
 export interface ProfileResult {
   signals?: Partial<ScrapeSignals>;
@@ -26,7 +27,14 @@ const profiles: SiteProfile[] = [
   jellycatProfile,
   noodollProfile,
   greenPheasantProfile,
+  friedpotatoProfile,
 ];
+
+const apiProfileHosts = friedpotatoProfile.hosts;
+
+export function hasApiProfile(host: string): boolean {
+  return apiProfileHosts.some((h) => host.endsWith(h));
+}
 
 export function hasDedicatedProfile(host: string): boolean {
   return profiles.some((p) => p.hosts.some((h) => host.endsWith(h)));

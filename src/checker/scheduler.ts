@@ -18,7 +18,8 @@ import { logger } from '../core/logging';
 import { FetchError } from '../core/errors';
 import { recordMetric } from '../telemetry/metrics';
 import { recordAudit } from '../telemetry/audit';
-import { hasDedicatedProfile } from '../profiles';
+import { hasDedicatedProfile, hasApiProfile } from '../profiles';
+import { checkFriedpotatoStock } from '../profiles/sites/friedpotato.com';
 
 export async function handleCron(env: EnvBindings): Promise<Response> {
   const repo = new TrackRepository(new D1Client(env.D1_DB));
@@ -44,6 +45,37 @@ type DueTrack = Track & { tg_user_id: string };
 async function processTrack(track: DueTrack, repo: TrackRepository, env: EnvBindings) {
   const now = new Date();
   try {
+    // API-based profiles bypass HTML fetch entirely
+    if (hasApiProfile(track.site_host)) {
+      const result = await checkFriedpotatoStock(track.url, track.site_host);
+      const observedStatus = result.statusHint ?? 'UNKNOWN';
+      const decision = applyTransition({
+        track,
+        observedStatus,
+        now,
+        success: true,
+        needsManual: false,
+      });
+      const patch = {
+        ...decision.patch,
+        title: result.title ?? track.title,
+        price: result.price ?? track.price,
+        last_http_status: null,
+        last_error_kind: null,
+        state_reason: observedStatus === 'UNKNOWN' ? 'UNCLASSIFIED_HTML' as const : null,
+      };
+      if (decision.alert) {
+        const chatId = Number(track.tg_user_id);
+        await sendTelegramMessage(env, chatId, formatAlert({ ...track, ...patch } as Track), 'Markdown');
+        recordAudit('alert_sent', { trackId: track.id, userId: track.user_id });
+        recordMetric('alert_sent');
+        await repo.deleteTrack(track.id);
+      } else {
+        await repo.updateAfterCheck(track.id, patch);
+      }
+      return;
+    }
+
     const outcome = await fetchTrack(track, env);
     if (outcome.status === 'not-modified') {
       const decision = applyTransition({
