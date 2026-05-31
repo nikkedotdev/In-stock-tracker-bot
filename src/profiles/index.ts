@@ -30,7 +30,7 @@ const profiles: SiteProfile[] = [
   friedpotatoProfile,
 ];
 
-const apiProfileHosts = friedpotatoProfile.hosts;
+const apiProfileHosts = [...friedpotatoProfile.hosts];
 
 export function hasApiProfile(host: string): boolean {
   return apiProfileHosts.some((h) => host.endsWith(h));

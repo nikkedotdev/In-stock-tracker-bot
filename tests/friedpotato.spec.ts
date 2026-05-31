@@ -15,6 +15,10 @@ describe('friedpotato profile', () => {
     it('handles other subdomains', () => {
       expect(extractSiteCode('some-artist-friedpotato.com')).toBe('some-artist');
     });
+
+    it('rejects codes with header injection characters', () => {
+      expect(extractSiteCode('bad\r\nvalue-friedpotato.com')).toBeNull();
+    });
   });
 
   describe('extractProductSlug', () => {

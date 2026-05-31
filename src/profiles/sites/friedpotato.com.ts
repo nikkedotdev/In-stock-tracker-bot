@@ -1,5 +1,6 @@
 import { ProfileResult, SiteProfile } from '..';
 import { DEFAULT_REQUEST_TIMEOUT_MS } from '../../core/config';
+import { logger } from '../../core/logging';
 
 const GROOBEE_API = 'https://shop.api.groobee.com';
 
@@ -19,9 +20,13 @@ interface GroobeeSearchResponse {
 /**
  * Extracts the site code from a friedpotato.com hostname.
  * e.g. "ado-officialshop-friedpotato.com" → "ado-officialshop"
+ * Returns null if the extracted code contains invalid characters.
  */
-export function extractSiteCode(host: string): string {
-  return host.replace(/-friedpotato\.com$/, '');
+export function extractSiteCode(host: string): string | null {
+  const code = host.replace(/-friedpotato\.com$/, '');
+  // Reject codes with characters that could cause header injection
+  if (!code || /[\r\n\0]/.test(code)) return null;
+  return code;
 }
 
 /**
@@ -43,7 +48,7 @@ export async function checkFriedpotatoStock(
 ): Promise<ProfileResult> {
   const siteCode = extractSiteCode(host);
   const slug = extractProductSlug(url);
-  if (!slug) return {};
+  if (!siteCode || !slug) return {};
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -87,7 +92,8 @@ export async function checkFriedpotatoStock(
     }
 
     return toProfileResult(product);
-  } catch {
+  } catch (err) {
+    logger.warn('friedpotato API check failed', { url, host, error: (err as Error).message });
     return {};
   } finally {
     clearTimeout(timeout);
@@ -98,7 +104,7 @@ function toProfileResult(product: GroobeeSearchProduct): ProfileResult {
   return {
     statusHint: product.isSoldOut ? 'NOT_AVAILABLE' : 'AVAILABLE',
     title: product.name,
-    price: `¥${product.price.toLocaleString()}`,
+    price: `¥${new Intl.NumberFormat('ja-JP').format(product.price)}`,
   };
 }
 
