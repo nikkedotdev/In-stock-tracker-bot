@@ -9,6 +9,14 @@ vi.mock('../src/checker/fetcher', () => ({
   fetchTrack: vi.fn(),
 }));
 
+vi.mock('../src/profiles', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/profiles')>();
+  return {
+    ...actual,
+    findApiProfile: vi.fn().mockReturnValue(undefined),
+  };
+});
+
 vi.mock('../src/bot/handlers', () => ({
   sendTelegramMessage: vi.fn(),
 }));
@@ -31,9 +39,11 @@ vi.mock('../src/core/logging', () => ({
 import { fetchTrack } from '../src/checker/fetcher';
 import { handleCron } from '../src/checker/scheduler';
 import { sendTelegramMessage } from '../src/bot/handlers';
+import { findApiProfile } from '../src/profiles';
 
 const fetchTrackMock = vi.mocked(fetchTrack);
 const sendTelegramMessageMock = vi.mocked(sendTelegramMessage);
+const findApiProfileMock = vi.mocked(findApiProfile);
 
 describe('handleCron diagnostics', () => {
   let db: MockD1Database;
@@ -120,5 +130,34 @@ describe('handleCron diagnostics', () => {
 
     const [track] = await repo.getActiveTracksByUser(userId);
     expect(track.state_reason).toBe('MANUAL_REVIEW');
+  });
+
+  it('preserves diagnostic state when API profile returns empty result', async () => {
+    const userId = await repo.upsertUser('456');
+    const trackId = await repo.insertTrack(
+      userId,
+      'https://ado-officialshop-friedpotato.com/products/Test_001',
+      'ado-officialshop-friedpotato.com',
+      'hash2',
+      '2024-01-01T00:00:00.000Z'
+    );
+    await repo.updateAfterCheck(trackId, {
+      state_reason: 'MANUAL_REVIEW',
+      needs_manual: 1,
+      status: 'UNKNOWN',
+    });
+
+    // Mock findApiProfile to return a profile with checkStock that returns empty
+    findApiProfileMock.mockReturnValue({
+      hosts: ['friedpotato.com'],
+      parse: () => ({}),
+      checkStock: async () => ({}),
+    });
+
+    await handleCron(env);
+
+    const [track] = await repo.getActiveTracksByUser(userId);
+    expect(track.state_reason).toBe('MANUAL_REVIEW');
+    expect(track.status).toBe('UNKNOWN');
   });
 });
