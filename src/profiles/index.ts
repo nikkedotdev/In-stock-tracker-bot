@@ -19,6 +19,7 @@ export interface ProfileResult {
 export interface SiteProfile {
   hosts: string[];
   parse(html: string, headers: Headers): ProfileResult;
+  checkStock?: (url: string, host: string) => Promise<ProfileResult>;
 }
 
 const profiles: SiteProfile[] = [
@@ -30,10 +31,8 @@ const profiles: SiteProfile[] = [
   friedpotatoProfile,
 ];
 
-const apiProfileHosts = [...friedpotatoProfile.hosts];
-
-export function hasApiProfile(host: string): boolean {
-  return apiProfileHosts.some((h) => host.endsWith(h));
+export function findApiProfile(host: string): SiteProfile | undefined {
+  return profiles.find((p) => p.checkStock && p.hosts.some((h) => host.endsWith(h)));
 }
 
 export function hasDedicatedProfile(host: string): boolean {

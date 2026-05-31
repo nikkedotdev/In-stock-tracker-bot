@@ -24,8 +24,7 @@ interface GroobeeSearchResponse {
  */
 export function extractSiteCode(host: string): string | null {
   const code = host.replace(/-friedpotato\.com$/, '');
-  // Reject codes with characters that could cause header injection
-  if (!code || /[\r\n\0]/.test(code)) return null;
+  if (!code || !/^[a-z0-9-]+$/i.test(code)) return null;
   return code;
 }
 
@@ -116,4 +115,5 @@ export const friedpotatoProfile: SiteProfile = {
     // This profile exists so hasDedicatedProfile() returns true.
     return {};
   },
+  checkStock: checkFriedpotatoStock,
 };

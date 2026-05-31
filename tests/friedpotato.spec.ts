@@ -4,7 +4,7 @@ import {
   extractProductSlug,
   checkFriedpotatoStock,
 } from '../src/profiles/sites/friedpotato.com';
-import { hasApiProfile } from '../src/profiles';
+import { findApiProfile } from '../src/profiles';
 
 describe('friedpotato profile', () => {
   describe('extractSiteCode', () => {
@@ -18,6 +18,8 @@ describe('friedpotato profile', () => {
 
     it('rejects codes with header injection characters', () => {
       expect(extractSiteCode('bad\r\nvalue-friedpotato.com')).toBeNull();
+      expect(extractSiteCode('bad value-friedpotato.com')).toBeNull();
+      expect(extractSiteCode('bad/path-friedpotato.com')).toBeNull();
     });
   });
 
@@ -37,13 +39,15 @@ describe('friedpotato profile', () => {
     });
   });
 
-  describe('hasApiProfile', () => {
-    it('returns true for friedpotato hosts', () => {
-      expect(hasApiProfile('ado-officialshop-friedpotato.com')).toBe(true);
+  describe('findApiProfile', () => {
+    it('returns profile for friedpotato hosts', () => {
+      const profile = findApiProfile('ado-officialshop-friedpotato.com');
+      expect(profile).toBeDefined();
+      expect(profile?.checkStock).toBeDefined();
     });
 
-    it('returns false for other hosts', () => {
-      expect(hasApiProfile('nike.com')).toBe(false);
+    it('returns undefined for other hosts', () => {
+      expect(findApiProfile('nike.com')).toBeUndefined();
     });
   });
 

@@ -18,8 +18,7 @@ import { logger } from '../core/logging';
 import { FetchError } from '../core/errors';
 import { recordMetric } from '../telemetry/metrics';
 import { recordAudit } from '../telemetry/audit';
-import { hasDedicatedProfile, hasApiProfile } from '../profiles';
-import { checkFriedpotatoStock } from '../profiles/sites/friedpotato.com';
+import { hasDedicatedProfile, findApiProfile } from '../profiles';
 
 export async function handleCron(env: EnvBindings): Promise<Response> {
   const repo = new TrackRepository(new D1Client(env.D1_DB));
@@ -46,8 +45,9 @@ async function processTrack(track: DueTrack, repo: TrackRepository, env: EnvBind
   const now = new Date();
   try {
     // API-based profiles bypass HTML fetch entirely
-    if (hasApiProfile(track.site_host)) {
-      const result = await checkFriedpotatoStock(track.url, track.site_host);
+    const apiProfile = findApiProfile(track.site_host);
+    if (apiProfile?.checkStock) {
+      const result = await apiProfile.checkStock(track.url, track.site_host);
       const observedStatus = result.statusHint ?? 'UNKNOWN';
       const decision = applyTransition({
         track,
