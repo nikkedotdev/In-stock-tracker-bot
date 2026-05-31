@@ -62,7 +62,7 @@ async function processTrack(track: DueTrack, repo: TrackRepository, env: EnvBind
         price: result.price ?? track.price,
         last_http_status: null,
         last_error_kind: null,
-        state_reason: observedStatus === 'UNKNOWN' ? 'UNCLASSIFIED_HTML' as const : null,
+        state_reason: null,
       };
       if (decision.alert) {
         const chatId = Number(track.tg_user_id);
