@@ -48,7 +48,26 @@ async function processTrack(track: DueTrack, repo: TrackRepository, env: EnvBind
     const apiProfile = findApiProfile(track.site_host);
     if (apiProfile?.checkStock) {
       const result = await apiProfile.checkStock(track.url, track.site_host);
-      const observedStatus = result.statusHint ?? 'UNKNOWN';
+
+      // No usable stock signal — preserve current diagnostic state
+      if (!result.statusHint) {
+        const decision = applyTransition({
+          track,
+          observedStatus: track.status,
+          now,
+          success: true,
+          needsManual: track.needs_manual === 1,
+        });
+        await repo.updateAfterCheck(track.id, {
+          ...decision.patch,
+          last_http_status: null,
+          last_error_kind: null,
+          state_reason: track.state_reason,
+        });
+        return;
+      }
+
+      const observedStatus = result.statusHint;
       const decision = applyTransition({
         track,
         observedStatus,
